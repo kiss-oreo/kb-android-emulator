@@ -377,7 +377,7 @@ export function DeviceCard({ avd, onLaunch, onStop, onDelete, onEdit, logs }) {
             <button className="btn btn-success btn-sm" onClick={handleLaunch} disabled={launching}>
               {launching ? <><Spinner size={12} />Starting…</> : <><Play size={12} style={{ marginRight: 6 }} />Launch</>}
             </button>
-            <button className="btn btn-ghost btn-sm" style={{ color: '#fbbf24' }} onClick={handleWipeLaunch} disabled={launching} title="Factory Reset & Boot">
+            <button className="btn btn-ghost btn-sm" style={{ color: '#fbbf24' }} onClick={handleWipeLaunch} disabled={launching} title="Wipe & Boot Recovery — clears corrupted Quick Boot snapshots and factory-resets to fix boot loops (launches with -wipe-data)">
               <Zap size={12} style={{ marginRight: 6 }} /> Wipe & Boot
             </button>
           </>
@@ -434,15 +434,23 @@ export function DeviceCard({ avd, onLaunch, onStop, onDelete, onEdit, logs }) {
 
       {showConfirmWipe && (
         <div className="modal-overlay" onClick={() => setShowConfirmWipe(false)}>
-          <div className="modal" style={{ width: 420 }} onClick={e => e.stopPropagation()}>
+          <div className="modal" style={{ width: 440 }} onClick={e => e.stopPropagation()}>
             <div className="modal-title" style={{ color: '#fbbf24' }}>
-              <AlertTriangle size={16} style={{ marginRight: 6 }} /> <span>Factory Reset AVD?</span>
+              <AlertTriangle size={16} style={{ marginRight: 6 }} /> <span>Wipe &amp; Boot Recovery?</span>
             </div>
-            <div style={{ padding: '16px 20px', fontSize: 13, lineHeight: '1.5', color: 'var(--text-secondary)' }}>
-              Are you sure you want to perform a **Factory Reset** on <strong>{avd.name.replace(/_/g, ' ')}</strong>?
-              <br /><br />
-              This will completely wipe all user accounts, installed apps, settings, and files. 
-              <strong style={{ color: '#fbbf24' }}> This cannot be undone!</strong>
+            <div style={{ padding: '16px 20px', fontSize: 13, lineHeight: '1.55', color: 'var(--text-secondary)' }}>
+              <div>
+                Run recovery boot on <strong>{avd.name.replace(/_/g, ' ')}</strong>?
+              </div>
+              <div style={{ marginTop: 10, fontSize: 12, background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)', borderRadius: 8, padding: '8px 10px', lineHeight: 1.5 }}>
+                Clears corrupted <strong>Quick Boot snapshots</strong> from disk and launches with{' '}
+                <span className="font-mono" style={{ fontSize: 11 }}>-wipe-data -no-snapshot-load</span>{' '}
+                to break boot loops and force a fresh cold boot.
+              </div>
+              <div style={{ marginTop: 10 }}>
+                This erases user accounts, installed apps, settings and files inside the emulator.{' '}
+                <strong style={{ color: '#fbbf24' }}>This cannot be undone!</strong>
+              </div>
             </div>
             <div className="modal-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.03)', marginTop: 0 }}>
                <button className="btn btn-ghost" onClick={() => setShowConfirmWipe(false)}>Cancel</button>
@@ -452,7 +460,7 @@ export function DeviceCard({ avd, onLaunch, onStop, onDelete, onEdit, logs }) {
                  await onLaunch(avd.name, true)
                  setLaunching(false)
                }} style={{ background: '#fbbf24', color: '#09090b', border: 'none' }}>
-                 <Zap size={12} style={{ marginRight: 6 }} /> Wipe & Boot AVD
+                 <Zap size={12} style={{ marginRight: 6 }} /> Wipe &amp; Boot AVD
                </button>
             </div>
           </div>

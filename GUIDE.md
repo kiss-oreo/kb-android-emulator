@@ -37,7 +37,19 @@ The manager automatically adjusts hardware layouts and VM Dalvik heaps based on 
 
 If a device hangs at the Google/Android boot animation loop:
 1.  **Cause:** The virtual device crashed or was edited during a quick-boot session, writing a corrupted memory snapshot to disk.
-2.  **Fix:** Click the **`🧹 Wipe & Boot`** button on your device card. This launches QEMU with the `-wipe-data` flag, discarding saved state files and booting fresh using your revised `config.ini` parameters.
+2.  **Fix:** Click the **`🧹 Wipe & Boot`** button on your device card. This deletes the AVD's `snapshots/` folder (plus stale snapshot locks) and launches QEMU with `-wipe-data -no-snapshot-load`, discarding saved state files and cold-booting fresh using your revised `config.ini` parameters. Recovery works for Phone, Wear OS, Android TV and Automotive images, and always forces a cold boot even when Quick Boot is enabled.
+
+---
+
+## 📁 Manual SDK Location (Fallback)
+
+The app resolves the SDK in this order: manual override → app-managed `android-sdk/sdk` (if installed) → `ANDROID_SDK_ROOT` / `ANDROID_HOME` → standard OS locations → managed path.
+
+If you installed the SDK somewhere unusual (e.g. `D:\Dev\Android\Sdk`):
+1.  Open **Settings → Android SDK Location**.
+2.  Click **Browse…** and pick the folder that directly contains `emulator/`, `platform-tools/` or `cmdline-tools/`.
+3.  Click **Validate** (optional) then **Use This SDK**.
+4.  The Setup page and Console Logs will now report the manual path. Use **Reset to Auto** at any time to return to auto-detect.
 
 ---
 

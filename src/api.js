@@ -63,6 +63,12 @@ export const updateAvdConfig = (opts) => invoke('update_avd_config', {
 export const optimizeGuestApps = () => invoke('optimize_guest_apps')
 export const getAppVersion = () => invoke('get_app_version')
 
+// ─── Manual SDK path configuration ───────────────────────────────────────────
+export const getSdkPathInfo = () => invoke('get_sdk_path_info')
+export const validateSdkPath = (opts) => invoke('validate_sdk_path', { path: opts.path })
+export const setCustomSdkPath = (opts) => invoke('set_custom_sdk_path', { path: opts.path })
+export const clearCustomSdkPath = () => invoke('clear_custom_sdk_path')
+
 // ─── Event listeners (mirrors Electron's window.api.on) ─────────────────────
 const _unlisten = {}
 

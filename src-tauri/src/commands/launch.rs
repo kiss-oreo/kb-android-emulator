@@ -11,6 +11,46 @@ fn get_running_avds() -> &'static std::sync::Mutex<std::collections::HashMap<Str
     RUNNING_AVDS.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
 }
 
+// ─── Wipe & Boot Recovery: purge corrupted Quick Boot snapshots ───────────────
+// Deletes the AVD's `snapshots/` tree plus stale snapshot lock files so the
+// next launch cannot resume a corrupted memory snapshot (the classic cause of
+// boot loops after a crash or a config edit mid-session).
+// Returns the number of snapshot entries removed (0 when nothing was there).
+pub fn purge_quickboot_snapshots(name: &str) -> usize {
+    let avd_path = avd_dir().join(format!("{}.avd", name));
+    let snapshot_dir = avd_path.join("snapshots");
+    let mut removed = 0usize;
+
+    if snapshot_dir.is_dir() {
+        if let Ok(entries) = std::fs::read_dir(&snapshot_dir) {
+            removed = entries.count();
+        }
+        // Remove the whole tree; a missing dir on next boot = clean cold boot.
+        let _ = std::fs::remove_dir_all(&snapshot_dir);
+        // Count the tree itself as one more item when it existed.
+        removed = removed.max(1);
+    }
+
+    // Stale snapshot / boot-choice state that can also wedge Quick Boot.
+    for stale in [
+        "multiinstance.lock",
+        "hardware-qemu.ini.lock",
+        "quickbootChoice.ini",
+        "snapshot.lock",
+    ] {
+        let p = avd_path.join(stale);
+        if p.exists() {
+            if p.is_dir() {
+                let _ = std::fs::remove_dir_all(&p);
+            } else {
+                let _ = std::fs::remove_file(&p);
+            }
+        }
+    }
+
+    removed
+}
+
 // Windows-only: raw Win32 API for process priority elevation
 #[cfg(windows)]
 mod win32_priority {
@@ -68,11 +108,28 @@ pub fn launch_avd(
     }
 
     let is_raw = raw_launch.unwrap_or(false) || is_wear || is_tv || is_auto;
+    // "Wipe & Boot Recovery" mode — factory-reset + snapshot purge to fix boot loops.
+    let is_recovery = wipe_data.unwrap_or(false);
 
     if !is_raw {
         auto_repair_special_configs(&name);
     }
     clean_stale_locks(&name);
+
+    // Recovery pre-flight: delete corrupted Quick Boot snapshots from disk BEFORE
+    // launching, so `-wipe-data` + cold boot can't resume a poisoned snapshot.
+    if is_recovery {
+        let purged = purge_quickboot_snapshots(&name);
+        let _ = window.emit(
+            "log",
+            format!(
+                "Wipe & Boot Recovery for \"{}\": cleared {} snapshot entr{} + user data will be wiped (-wipe-data).",
+                name,
+                purged,
+                if purged == 1 { "y" } else { "ies" },
+            ),
+        );
+    }
 
     #[cfg(windows)]
     let emulator_exe = emulator_dir().join("emulator.exe");
@@ -123,12 +180,28 @@ pub fn launch_avd(
     let mut args = vec![];
 
     if is_raw {
-        let _ = window.emit(
-            "log",
-            format!("Launching \"{}\" in RAW / Default Mode...", name),
-        );
+        if is_recovery {
+            let _ = window.emit(
+                "log",
+                format!(
+                    "Launching \"{}\" in RAW Recovery Mode (-wipe-data -no-snapshot-load)...",
+                    name
+                ),
+            );
+        } else {
+            let _ = window.emit(
+                "log",
+                format!("Launching \"{}\" in RAW / Default Mode...", name),
+            );
+        }
         args.push("-avd".to_string());
         args.push(name.clone());
+        // Recovery must work for Wear/TV/Auto too — previously the raw path
+        // silently dropped the wipe flag, leaving boot loops unfixable.
+        if is_recovery {
+            args.push("-wipe-data".to_string());
+            args.push("-no-snapshot-load".to_string());
+        }
     } else {
         let mut gpu = gpu_mode.unwrap_or_else(|| "auto".to_string());
         
@@ -154,7 +227,14 @@ pub fn launch_avd(
 
         let _ = window.emit(
             "log",
-            format!("Launching \"{}\" — GPU={}, accel={}", name, gpu, accelerator),
+            if is_recovery {
+                format!(
+                    "Launching \"{}\" — GPU={}, accel={} [RECOVERY: -wipe-data -no-snapshot-load]",
+                    name, gpu, accelerator
+                )
+            } else {
+                format!("Launching \"{}\" — GPU={}, accel={}", name, gpu, accelerator)
+            },
         );
 
         let (heap_sz, growth_lim) = if is_wear {
@@ -200,17 +280,32 @@ pub fn launch_avd(
             args.push("wasapi".to_string());
         }
 
-        if let Some(false) = quick_boot {
-            args.push("-no-snapshot-load".to_string());
-            args.push("-no-snapshot-save".to_string());
-        }
-
-        if let Some(true) = read_only {
-            args.push("-read-only".to_string());
-        }
-
-        if let Some(true) = wipe_data {
+        // Wipe & Boot Recovery always forces a cold boot: loading a snapshot
+        // right after wiping user data would resurrect the boot loop.
+        if is_recovery {
             args.push("-wipe-data".to_string());
+            args.push("-no-snapshot-load".to_string());
+            // `-read-only` (RAM-disk cache) conflicts with a data wipe — the
+            // wipe wins and read-only is skipped for this launch.
+            if read_only.unwrap_or(false) {
+                let _ = window.emit(
+                    "log",
+                    "Recovery: skipping -read-only for this launch (incompatible with -wipe-data).",
+                );
+            }
+            // Still honour "don't save snapshots" when Quick Boot is off.
+            if quick_boot == Some(false) {
+                args.push("-no-snapshot-save".to_string());
+            }
+        } else {
+            if let Some(false) = quick_boot {
+                args.push("-no-snapshot-load".to_string());
+                args.push("-no-snapshot-save".to_string());
+            }
+
+            if let Some(true) = read_only {
+                args.push("-read-only".to_string());
+            }
         }
 
         if let Some(false) = boot_anim {

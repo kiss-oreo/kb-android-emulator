@@ -27,8 +27,8 @@ import {
   Trash2,
   Download,
   Info,
-  Minus,
-  Square,
+  FolderOpen,
+  HardDrive,
   X
 } from 'lucide-react'
 import './index.css'
@@ -204,7 +204,12 @@ export default function App() {
       rawLaunch,
     })
     if (result.ok) {
-      toast(`Launching "${name}"...`, 'info')
+      toast(
+        wipeData
+          ? `Wipe & Boot Recovery launching "${name}" (snapshots cleared, -wipe-data)...`
+          : `Launching "${name}"...`,
+        wipeData ? 'success' : 'info'
+      )
       setTimeout(refreshAvds, 500)
     } else {
       toast(result.error, 'error')
@@ -530,9 +535,20 @@ export default function App() {
                   errors={sdkErrors}
                   setErrors={setSdkErrors}
                 />
-                : <div className="alert alert-warn flex items-center gap-2">
-                  <AlertTriangle size={14} style={{ flexShrink: 0 }} />
-                  <span>Please install cmdline-tools first from the <strong>Setup</strong> page.</span>
+                : <div className="alert alert-warn flex items-start gap-2">
+                  <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <span>
+                    Please install cmdline-tools first from the <strong>Setup</strong> page.
+                    {status?.sdk_dir && (
+                      <>
+                        <br />
+                        <span style={{ fontSize: 11, opacity: 0.9 }}>
+                          Active SDK: <span className="font-mono">{status.sdk_dir}</span>
+                          {' '}— if your SDK lives elsewhere, set it in <strong>Settings → Android SDK Location</strong>.
+                        </span>
+                      </>
+                    )}
+                  </span>
                 </div>
               }
             </div>
@@ -570,10 +586,47 @@ export default function App() {
                 <p className="page-subtitle">{t('setup_subtitle')}</p>
               </div>
 
-              <div className="alert alert-info flex items-start gap-2" style={{ marginBottom: 24 }}>
+              <div className="alert alert-info flex items-start gap-2" style={{ marginBottom: 16 }}>
                 <Info size={14} style={{ flexShrink: 0, marginTop: 2 }} />
                 <span>{t('setup_warn')}</span>
               </div>
+
+              {/* ── Active SDK location (with manual-override shortcut) ── */}
+              {status?.sdk_dir && (
+                <div
+                  className="flex items-center gap-2"
+                  style={{
+                    marginBottom: 20,
+                    padding: '10px 12px',
+                    borderRadius: 10,
+                    border: '1px solid var(--border)',
+                    background: 'rgba(255,255,255,0.02)',
+                    fontSize: 12,
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <HardDrive size={14} style={{ flexShrink: 0, color: 'var(--text-secondary)' }} />
+                  <span style={{ color: 'var(--text-secondary)' }}>SDK:</span>
+                  <span className="font-mono" style={{ fontSize: 11, flex: 1, minWidth: 200, wordBreak: 'break-all' }} title={status.sdk_dir}>
+                    {status.sdk_dir}
+                  </span>
+                  {status.is_custom_sdk
+                    ? <span className="badge badge-ok">Manual</span>
+                    : status.sdk_source === 'detected' || (status.sdk_source || '').startsWith('env:')
+                      ? <span className="badge badge-ok">Auto-detected</span>
+                      : <span className="badge badge-gpu">Managed</span>
+                  }
+                  <button
+                    className="btn btn-ghost btn-sm flex items-center gap-1"
+                    onClick={() => setPage('settings')}
+                    title="Non-standard SDK folder? Set a manual fallback in Settings."
+                    style={{ fontSize: 11 }}
+                  >
+                    <FolderOpen size={12} />
+                    Change…
+                  </button>
+                </div>
+              )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {[
@@ -717,6 +770,8 @@ export default function App() {
           {page === 'settings' && (
             <Settings
               toast={toast}
+              refreshStatus={refreshStatus}
+              status={status}
             />
           )}
 

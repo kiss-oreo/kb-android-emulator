@@ -6,7 +6,7 @@ use tauri::{Emitter, Window};
 #[allow(unused_imports)]
 use std::os::windows::process::CommandExt;
 
-use super::paths::{avd_dir, cmdline_dir, jdk_dir, sdk_dir, build_env, get_java_exe};
+use super::paths::{avd_dir, cmdline_dir, jdk_dir, sdk_dir, build_env, get_java_exe, resolve_sdk_dir};
 use super::types::{CommandResult, InstallStatus};
 
 // ─── Check Install Status ─────────────────────────────────────────────────────
@@ -65,6 +65,9 @@ pub fn check_install_status() -> InstallStatus {
         licenses_dir.exists() && std::fs::read_dir(&licenses_dir).map(|mut d| d.next().is_some()).unwrap_or(false)
     };
 
+    let (_resolved_sdk, sdk_source) = resolve_sdk_dir();
+    let is_custom_sdk = sdk_source == "custom";
+
     InstallStatus {
         jdk_installed: java_exe.map(|p| p.exists()).unwrap_or(false),
         cmdline_installed: cmdline_ok,
@@ -74,6 +77,8 @@ pub fn check_install_status() -> InstallStatus {
         sdk_dir: sdk_dir().to_string_lossy().to_string(),
         installed_packages,
         licenses_accepted,
+        sdk_source,
+        is_custom_sdk,
     }
 }
 
