@@ -79,6 +79,10 @@ fn main() {
             commands::install::uninstall_jdk,
             commands::install::uninstall_cmdline_tools,
             commands::window::get_app_version,
+            commands::sdk_config::get_sdk_path_info,
+            commands::sdk_config::validate_sdk_path,
+            commands::sdk_config::set_custom_sdk_path,
+            commands::sdk_config::clear_custom_sdk_path,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

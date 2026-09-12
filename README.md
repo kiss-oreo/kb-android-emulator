@@ -13,7 +13,8 @@ It includes sophisticated auto-tuning, system resource clamping, graphics pipeli
     *   **Wear OS Watches:** Locks resources to 1GB RAM / 1 Core, sets a 128MB Dalvik heap, and strips conflicting resolution properties to guarantee circular watch face layouts boot stably.
     *   **Android TV:** Locks resources to 2GB RAM / 2 Cores and tunes Dalvik heap size.
     *   **Android Automotive:** Locks resources to 4GB RAM / 4 Cores for optimal dashboard UI emulation.
-*   **Wipe & Boot Recovery:** A one-click diagnostic tool that launches the emulator with the `-wipe-data` flag to wipe corrupted Quick Boot snapshots and reset user space storage, instantly resolving boot loops.
+*   **Wipe & Boot Recovery:** A one-click diagnostic tool that deletes corrupted Quick Boot snapshots from disk and launches the emulator with `-wipe-data -no-snapshot-load` to reset user space storage, instantly resolving boot loops (works for Phone, Wear OS, TV and Automotive images).
+*   **Manual SDK Path Configuration:** Auto-detects existing Android SDKs (`ANDROID_SDK_ROOT` / `ANDROID_HOME`, Android Studio defaults) with a Settings fallback to browse and pin a non-standard SDK folder, so the app never breaks on custom installs.
 *   **Ahead-Of-Time (AOT) compiler optimizer:** Compile all user-installed guest applications directly to native machine code via ADB (`cmd package compile -m speed`) for up to 40% performance gains.
 *   **Network Acceleration:** Bypasses slirp DNS latencies by routing emulator traffic through Cloudflare's public resolver (`1.1.1.1`) and tunes QEMU TCP write window buffers on launch.
 
@@ -43,7 +44,7 @@ Ensure you have the following installed on your machine:
     ```
 
 3.  **Configure environment:**
-    The application will automatically detect your local Android SDK located in your user profile path or look for a local `android-sdk/` folder inside the app directory.
+    The application automatically detects your local Android SDK (`ANDROID_SDK_ROOT` / `ANDROID_HOME`, Android Studio defaults, or the local `android-sdk/` folder). If your SDK lives in a non-standard directory, open **Settings → Android SDK Location** and browse to it as a manual fallback.
 
 ---
 

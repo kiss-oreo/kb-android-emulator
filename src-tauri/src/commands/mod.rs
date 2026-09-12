@@ -9,9 +9,11 @@
 //   avd.rs        — AVD list/create/delete/update
 //   launch.rs     — launch_avd, stop_avd, optimize_guest_apps (cfg-gated priority)
 //   window.rs     — Window controls, open_folder, get_app_version
+//   sdk_config.rs — Manual SDK path override (get/set/clear/validate)
 
 pub mod types;
 pub mod paths;
+pub mod sdk_config;
 pub mod system_info;
 pub mod hypervisor;
 pub mod install;
